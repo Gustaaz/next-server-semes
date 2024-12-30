@@ -1,3 +1,5 @@
+import 'dotenv/config'
+
 import { fastify } from 'fastify'
 import { fastifyCors } from '@fastify/cors'
 import {
@@ -10,6 +12,8 @@ import { fastifySwagger } from '@fastify/swagger'
 import { fastifySwaggerUi } from '@fastify/swagger-ui'
 import { userRoutes } from './routes/user-routes'
 import { fastifyJwt } from '@fastify/jwt'
+import { env } from './env'
+import { authRoutes } from './routes/auth-routes'
 
 const app = fastify().withTypeProvider<ZodTypeProvider>()
 
@@ -18,6 +22,17 @@ app.setSerializerCompiler(serializerCompiler)
 
 app.register(fastifyCors, {
   origin: '*',
+})
+
+app.register(fastifyJwt, {
+  secret: env.SECRET_KEY_JWT,
+  cookie: {
+    cookieName: 'refreshToken',
+    signed: false,
+  },
+  sign: {
+    expiresIn: '1d',
+  },
 })
 
 app.register(fastifySwagger, {
@@ -52,19 +67,15 @@ app.register(fastifySwaggerUi, {
   transformSpecificationClone: true,
 })
 
-app.register(fastifyJwt, {
-  secret: 'secret',
-  cookie: {
-    cookieName: 'refreshToken',
-    signed: false,
-  },
-  sign: {
-    expiresIn: '1d',
-  },
-})
-
+app.register(authRoutes)
 app.register(userRoutes)
 
-app.listen({
-  port: 3333,
-})
+app.listen(
+  {
+    port: 3333,
+    host: '0.0.0.0',
+  },
+  () => {
+    console.log('HTTP server running on http://localhost:3333')
+  },
+)

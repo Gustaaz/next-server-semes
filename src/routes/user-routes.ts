@@ -1,34 +1,63 @@
 import z from 'zod'
-import type { FastifyTypedInstance } from '../types/fastify-typed-instance'
 
+import type { FastifyTypedInstance } from '../types/fastify-typed-instance'
+import { createUserSchema } from '@/validations/create-user-schema'
+import {
+  createUserController,
+  getAllUsersController,
+} from '@/controllers/user-controller'
+import { getAllUsersSchema } from '@/validations/get-all-users-schema'
+
+const tags = ['users']
+const basePath = '/users'
 export async function userRoutes(app: FastifyTypedInstance) {
-  app.get(
-    '/users',
+  app.post(
+    `${basePath}`,
     {
       schema: {
-        tags: ['users'],
-        description: 'Get all users',
+        tags,
+        description: 'Create new user',
+        body: createUserSchema,
+        response: {
+          201: z.object({
+            message: z.string().default('Usuário criado com sucesso'),
+            id: z.number(),
+          }),
+          400: z.object({
+            message: z.string().default('Error'),
+          }),
+        },
       },
     },
-    async () => {
-      return { hello: 'world' }
+    async (request, reply) => {
+      const { email, imagem_perfil, nome, senha, ativo, funcoes } = request.body
+      const { id } = await createUserController({
+        email,
+        imagem_perfil,
+        nome,
+        senha,
+        ativo,
+        funcoes,
+      })
+
+      reply.status(201).send({ message: 'Usuário criado com sucesso', id })
     },
   )
 
-  app.post(
-    '/users',
+  app.get(
+    `${basePath}`,
     {
       schema: {
-        tags: ['users'],
-        description: 'Create new user',
-        body: z.object({
-          name: z.string(),
-          email: z.string().email(),
-        }),
+        tags,
+        description: 'Get all users',
+        response: {
+          200: getAllUsersSchema,
+        },
       },
     },
-    async () => {
-      return { hello: 'world' }
+    async (_, reply) => {
+      const users = await getAllUsersController()
+      reply.send(users)
     },
   )
 }
